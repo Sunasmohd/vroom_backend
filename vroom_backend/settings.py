@@ -124,6 +124,14 @@ DATABASES = {
         'PASSWORD': os.environ.get('DB_PASSWORD'),
         'PORT': os.environ.get('DB_PORT'),
         'HOST': os.environ.get('DB_HOST'),
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+        },
+        'POOL_OPTIONS': {
+            'POOL_SIZE': 4,  # Max 4 connections (below your limit of 5)
+            'MAX_OVERFLOW': 0,  # No extra connections
+            'RECYCLE': 3600,  # Recycle connections every hour
+        },
  }
 }
 
