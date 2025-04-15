@@ -136,10 +136,12 @@ def menu_list_view(request):
         return Response(filtered_data, status=status.HTTP_200_OK)
     
     except ValueError as ve:
-        return Response({'error': 'Invalid branch_id format'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error':str(ve)}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         print(f"Error in menu_list_view: {e}")
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    finally:
+         close_old_connections()
 
 @api_view(['POST'])
 def deal_create_view(request):
@@ -314,6 +316,8 @@ def favorite_list_view(request):
     except Exception as e:
         print(f"Error in favorite_list_view: {e}")
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    finally:
+         close_old_connections()
 
 @api_view(['POST'])
 def favorite_create_view(request):
@@ -483,6 +487,8 @@ def get_cart(request):
             return Response(serializer.data)
         except Cart.DoesNotExist:
             return Response({'error': 'Cart not found'}, status=status.HTTP_404_NOT_FOUND)
+        finally:
+         close_old_connections()
         
 @api_view(['POST'])
 def create_cart(request):
@@ -655,6 +661,8 @@ def add_item_to_cart(request, cart_id):
         # Log and return any unexpected errors
         print(f"Error in add_item_to_cart: {e}")
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    finally:
+         close_old_connections()
     
 
 @api_view(['PUT'])
@@ -2003,3 +2011,5 @@ def carousel_list_view(request):
     except Exception as e:
         print(f"Error in carousel_list_view: {e}")
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    finally:
+         close_old_connections()

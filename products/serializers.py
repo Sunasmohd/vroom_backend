@@ -636,9 +636,9 @@ class MenuItemSerializer(serializers.ModelSerializer):
         fields = ['id', 'product', 'deal', 'image', 'title', 'price','has_flash_sale', 'flash_sale_price', 'is_veg', 'is_expandable', 'branch_availability']
 
     def get_image(self, obj):
-        if obj.product:
+        if obj.product and obj.product.image:
             return obj.product.image.url
-        elif obj.deal:
+        elif obj.deal and obj.deal.image:
             return obj.deal.image.url
         return None
 
@@ -751,7 +751,6 @@ class MenuSerializer(serializers.ModelSerializer):
             for product_id in product_ids:
                 stocks_for_product = product_stocks.filter(product_id=product_id)
                 total_branches_with_stock = stocks_for_product.count()
-                
                 if total_branches_with_stock == 0:
                     product_availability[product_id] = True
                 else:
@@ -798,7 +797,6 @@ class MenuSerializer(serializers.ModelSerializer):
             potentially_available_deal_ids = [did for did, available in deal_availability.items() if available]
             deal_products = DealProduct.objects.filter(deal_id__in=potentially_available_deal_ids)
             product_ids_in_deals = deal_products.values_list('product__id', flat=True)
-
             product_stocks_in_deals = ProductBranchStock.objects.filter(
                 branch_id__in=branch_ids,
                 product_id__in=product_ids_in_deals
@@ -806,13 +804,16 @@ class MenuSerializer(serializers.ModelSerializer):
 
             product_availability_in_deals = {}
             for product_id in product_ids_in_deals:
+                
                 stocks_for_product = product_stocks_in_deals.filter(product_id=product_id)
                 total_branches_with_stock = stocks_for_product.count()
                 
                 if total_branches_with_stock == 0:
                     product_availability_in_deals[product_id] = True
+                    
                 else:
                     unavailable_count = 0
+                    
                     for stock in stocks_for_product:
                         status = stock.get_availability_status()
                         if status['status'] in ['unavailable', 'out_of_stock']:
@@ -833,6 +834,7 @@ class MenuSerializer(serializers.ModelSerializer):
             # Combine deal-level and product-level unavailability
             final_unavailable_deal_ids = [did for did, available in deal_availability.items() if not available] + unavailable_deal_ids
             items = items.exclude(deal__id__in=final_unavailable_deal_ids)
+            
 
         return MenuItemSerializer(items, many=True, context=self.context).data
     
