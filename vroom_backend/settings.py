@@ -129,7 +129,7 @@ DATABASES = {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
         },
         'POOL_OPTIONS': {
-            'POOL_SIZE': 3,  # Reduced to 3 to be conservative
+            'POOL_SIZE': 4,  # Reduced to 3 to be conservative
             'MAX_OVERFLOW': 0,  # No extra connections
             'RECYCLE': 3600,  # Recycle every hour
             'TIMEOUT': 30,  # Close idle connections after 30 seconds
