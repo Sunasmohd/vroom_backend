@@ -16,7 +16,9 @@ from django.db import models
 from django.core.cache import cache
 from django.db import transaction
 import os
+from django.db import close_old_connections
 from dotenv import load_dotenv
+
 load_dotenv()
 
 stripe.api_key = os.environ.get('STRIPE_API_KEY')
@@ -246,6 +248,8 @@ def special_suggestions_list_view(request):
     except Exception as e:
         print(f"Error in special_suggestions_list_view: {e}")
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    finally:
+            close_old_connections()
 
 @api_view(['GET'])
 def deal_list_view(request):

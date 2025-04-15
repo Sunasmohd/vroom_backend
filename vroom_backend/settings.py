@@ -118,7 +118,7 @@ pymysql.install_as_MySQLdb()
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
+        'ENGINE': 'dj_db_conn_pool.backends.mysql',  # Use pooling backend
         'NAME': os.environ.get('DB_NAME'),
         'USER': os.environ.get('DB_USERNAME'),
         'PASSWORD': os.environ.get('DB_PASSWORD'),
@@ -126,13 +126,16 @@ DATABASES = {
         'HOST': os.environ.get('DB_HOST'),
         'OPTIONS': {
             'charset': 'utf8mb4',
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
         },
         'POOL_OPTIONS': {
-            'POOL_SIZE': 4,  # Max 4 connections (below your limit of 5)
+            'POOL_SIZE': 3,  # Reduced to 3 to be conservative
             'MAX_OVERFLOW': 0,  # No extra connections
-            'RECYCLE': 3600,  # Recycle connections every hour
+            'RECYCLE': 3600,  # Recycle every hour
+            'TIMEOUT': 30,  # Close idle connections after 30 seconds
         },
- }
+        'CONN_MAX_AGE': 0,  # Close connections after each request
+    }
 }
 
 
