@@ -10,6 +10,20 @@ class User(models.Model):
     createdAt = models.DateTimeField(auto_now_add=True)
     last_login = models.DateTimeField(auto_now=True)
     
+    @property
+    def is_authenticated(self):
+        """
+        Always return True for instances of User, indicating an authenticated user.
+        """
+        return True
+
+    @property
+    def is_anonymous(self):
+        """
+        Always return False for instances of User, indicating a non-anonymous user.
+        """
+        return False
+    
 
 class Feedback(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='feedback')

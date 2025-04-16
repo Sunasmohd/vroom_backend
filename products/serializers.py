@@ -602,17 +602,23 @@ class FavoriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(f"Deal with id {deal_id} does not exist.")
 
         return data
+    
 
     def create(self, validated_data):
         product_id = validated_data.pop('product_id', None)
         deal_id = validated_data.pop('deal_id', None)
-        user = self.context['request'].user
-
-        favorite = Favorite(
-            user=user,
-            product=Product.objects.get(id=product_id) if product_id else None,
-            deal=Deal.objects.get(id=deal_id) if deal_id else None,
-        )
+        user =  self.context['request'].user
+        if user is None or isinstance(user, AnonymousUser):
+            favorite = Favorite(
+                product=Product.objects.get(id=product_id) if product_id else None,
+                deal=Deal.objects.get(id=deal_id) if deal_id else None,
+            )
+        else:
+            favorite = Favorite(
+                user=user,
+                product=Product.objects.get(id=product_id) if product_id else None,
+                deal=Deal.objects.get(id=deal_id) if deal_id else None,
+            )
         favorite.save()
         return favorite
 

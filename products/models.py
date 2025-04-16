@@ -260,15 +260,15 @@ class DealTags(models.Model):
         return f"{self.deal.title} - {self.tag.title}"
      
 class Favorite(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorites')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorites', null=True, blank=True)
     product = models.ForeignKey('Product', on_delete=models.CASCADE, null=True, blank=True)
     deal = models.ForeignKey('Deal', on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['user', 'product'], name='unique_user_product_favorite', condition=models.Q(product__isnull=False)),
-            models.UniqueConstraint(fields=['user', 'deal'], name='unique_user_deal_favorite', condition=models.Q(deal__isnull=False)),
+            models.UniqueConstraint(fields=['user', 'product'], name='unique_user_product_favorite'),
+            models.UniqueConstraint(fields=['user', 'deal'], name='unique_user_deal_favorite'),
         ]
 
     def clean(self):
@@ -279,7 +279,7 @@ class Favorite(models.Model):
 
     def __str__(self):
         item = self.product.title if self.product else self.deal.title
-        return f"{self.user.name} - {item}"
+        return f"{self.user} - {item}"
     
 class DealProduct(models.Model):
     deal = models.ForeignKey(to=Deal,on_delete=models.CASCADE, related_name='dealproduct_set')

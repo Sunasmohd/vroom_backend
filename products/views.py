@@ -304,28 +304,92 @@ def deal_detail_view(request, deal_id):
         print(f"Error in deal_detail_view: {e}")
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
+# @api_view(['GET'])
+# def favorite_list_view(request):
+#     """
+#     List all favorites for the authenticated user.
+#     """
+#     try:
+#         favorites = Favorite.objects.filter(user=request.user)
+#         serializer = FavoriteSerializer(favorites, many=True, context={'request': request})
+#         return Response(serializer.data, status=status.HTTP_200_OK)
+#     except Exception as e:
+#         print(f"Error in favorite_list_view: {e}")
+#         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+#     finally:
+#          close_old_connections()
+
+# @api_view(['POST'])
+# def favorite_create_view(request):
+#     """
+#     Create a new favorite for the authenticated user.
+#     """
+#     try:
+#         serializer = FavoriteSerializer(data=request.data, context={'request': request})
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data, status=status.HTTP_201_CREATED)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#     except Exception as e:
+#         print(f"Error in favorite_create_view: {e}")
+#         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+# @api_view(['DELETE'])
+# def favorite_delete_view(request, favorite_id):
+#     """
+#     Delete a favorite by ID.
+#     """
+#     try:
+#         favorite = Favorite.objects.get(id=favorite_id, user=request.user)
+#         favorite.delete()
+#         return Response(status=status.HTTP_204_NO_CONTENT)
+#     except Favorite.DoesNotExist:
+#         return Response({'error': 'Favorite not found'}, status=status.HTTP_404_NOT_FOUND)
+#     except Exception as e:
+#         print(f"Error in favorite_delete_view: {e}")
+#         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 @api_view(['GET'])
 def favorite_list_view(request):
     """
-    List all favorites for the authenticated user.
+    List all favorites. For non-logged-in users, use query params; for logged-in, use user ID.
     """
     try:
-        favorites = Favorite.objects.filter(user=request.user)
+        if request.user.is_authenticated:
+            favorites = Favorite.objects.filter(user=request.user)
+        else:
+            product_ids = request.query_params.get('product_ids', '').split(',')
+            deal_ids = request.query_params.get('deal_ids', '').split(',')
+            product_ids = [pid for pid in product_ids if pid.isdigit()]
+            deal_ids = [did for did in deal_ids if did.isdigit()]
+            favorites = Favorite.objects.filter(
+                product__id__in=product_ids, user__isnull=True
+            ) | Favorite.objects.filter(deal__id__in=deal_ids, user__isnull=True)
+        
         serializer = FavoriteSerializer(favorites, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
     except Exception as e:
         print(f"Error in favorite_list_view: {e}")
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     finally:
-         close_old_connections()
+        close_old_connections()
 
 @api_view(['POST'])
 def favorite_create_view(request):
     """
-    Create a new favorite for the authenticated user.
+    Create a new favorite. For non-logged-in users, store locally; for logged-in, save to DB.
     """
     try:
-        serializer = FavoriteSerializer(data=request.data, context={'request': request})
+        data = request.data.copy()
+        print(request.user.is_authenticated)
+        if request.user.is_authenticated:
+            data['user'] = request.user.id
+        else:
+            data['user'] = None  # Non-logged-in favorites can be stored with null user
+            print(data['user'])
+            
+        serializer = FavoriteSerializer(data=data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -337,17 +401,65 @@ def favorite_create_view(request):
 @api_view(['DELETE'])
 def favorite_delete_view(request, favorite_id):
     """
-    Delete a favorite by ID.
+    Delete a favorite by ID. For non-logged-in users, rely on client-side logic.
     """
     try:
-        favorite = Favorite.objects.get(id=favorite_id, user=request.user)
+        if request.user.is_authenticated:
+            favorite = Favorite.objects.get(id=favorite_id, user=request.user)
+        else:
+            favorite = Favorite.objects.get(id=favorite_id)
         favorite.delete()
+        
         return Response(status=status.HTTP_204_NO_CONTENT)
     except Favorite.DoesNotExist:
         return Response({'error': 'Favorite not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         print(f"Error in favorite_delete_view: {e}")
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+def merge_favorites_view(request):
+    """
+    Merge local favorites (product_ids, deal_ids) into the user's favorites.
+    """
+    try:
+        product_ids = request.data.get('product_ids', [])
+        deal_ids = request.data.get('deal_ids', [])
+        user = request.user
+
+        # Create favorites for each product/deal ID
+        print('merging')
+        
+        for pid in product_ids:
+            if pid and Product.objects.filter(id=pid).exists():
+                Favorite.objects.get_or_create(user=user, product_id=pid)
+        for did in deal_ids:
+            if did and Deal.objects.filter(id=did).exists():
+                Favorite.objects.get_or_create(user=user, deal_id=did)
+        print('merging 2')
+        
+        # Delete user=null favorites for these IDs to avoid duplicates
+        print(Favorite.objects.filter(user__isnull=True,product__id__in=product_ids))
+        print(Favorite.objects.filter(user__isnull=True))
+        print(Favorite.objects.filter(product__id__in=product_ids))
+        Favorite.objects.filter(
+            user__isnull=True, product__id__in=product_ids
+        ).delete()
+        Favorite.objects.filter(
+            user__isnull=True, deal__id__in=deal_ids
+        ).delete()
+        print('merging complete')
+        
+
+        # Return updated favorites
+        favorites = Favorite.objects.filter(user=user)
+        serializer = FavoriteSerializer(favorites, many=True, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as e:
+        print(f"Error in merge_favorites_view: {e}")
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    finally:
+        close_old_connections()
     
 @api_view(['GET'])
 def get_available_time_slots(request):

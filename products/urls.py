@@ -41,7 +41,7 @@ urlpatterns = [
     path('favorites/', favorite_list_view, name='favorite_list'),
     path('favorites/create/', favorite_create_view, name='favorite_create'),
     path('favorites/<int:favorite_id>/delete/', favorite_delete_view, name='favorite_delete'),
-    
+    path('favorites/merge/', merge_favorites_view, name='favorite_merge'),
     path('categories/', category_list_view, name='category_list_view'), 
     
     path('special-suggestions/', special_suggestions_list_view, name='special_suggestions_list_view'),  

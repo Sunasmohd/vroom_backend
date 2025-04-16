@@ -62,15 +62,15 @@ def submit_feedback(request):
     try:
         auth_header = request.headers.get("Authorization")
         if not auth_header:
-            return Response({"message": "Token not provided"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"error": "Token not provided"}, status=status.HTTP_401_UNAUTHORIZED)
         if not auth_header.startswith("Bearer "):
-            return Response({"message": "Invalid token format"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"error": "Invalid token format"}, status=status.HTTP_401_UNAUTHORIZED)
         
         token = auth_header.split(" ")[1]  # Extract JWT
         user_id = decode_jwt(token)  # Decode JWT
         
         if not user_id:
-            return Response({"message": "Invalid or expired token"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"error": "Invalid or expired token"}, status=status.HTTP_401_UNAUTHORIZED)
     
         serializer = FeedbackSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
@@ -107,9 +107,9 @@ def refresh_token_view(request):
         payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=["HS256"])
         user_id = payload.get('user_id')
     except jwt.ExpiredSignatureError:
-        return Response({"message": "Refresh token expired"}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({"error": "Refresh token expired"}, status=status.HTTP_401_UNAUTHORIZED)
     except jwt.InvalidTokenError:
-        return Response({"message": "Invalid refresh token"}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({"error": "Invalid refresh token"}, status=status.HTTP_401_UNAUTHORIZED)
 
     # Verify the refresh token exists and if exists delete -- 
     # we are checking this because what if user logs out at that point the
@@ -121,7 +121,7 @@ def refresh_token_view(request):
         stored_token = RefreshToken.objects.get(token=refresh_token, user_id=user_id)
         stored_token.delete()
     except RefreshToken.DoesNotExist:
-        return Response({"message": "Invalid refresh token"}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({"error": "Invalid refresh token"}, status=status.HTTP_401_UNAUTHORIZED)
     
     # Issue a new access token
     access_token, new_refresh_token = create_jwt(user_id)
@@ -148,14 +148,14 @@ def send_otp(request):
             cache_key = f'OTP_${phone}'
             cache.set(cache_key, otp)
             phone_setup(phone,otp)
-            return Response({"message": f"{phone}"},status=200)
+            return Response({"message": f"{phone}"},status=status.HTTP_200_OK)
         elif email:
             print(otp)
             cache_key = f'OTP_${email}'
             cache.set(cache_key, otp)
             # email_setup(email,otp)
             print(cache)
-            return Response({"message": f"{email}"},status=200)
+            return Response({"message": f"{email}"},status=status.HTTP_200_OK)
         return Response({"error":"Make sure you provided a valid body [EMAIL or PHONE NUMBER]"}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         return Response({"error": f"Email sending failed: {e}"}, status=status.HTTP_400_BAD_REQUEST)
@@ -185,7 +185,7 @@ def verify_otp(request):
         elif email:
             cache_key = f'OTP_${email}'
         else:
-            return Response({"message": "Phone or email required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Phone or email required"}, status=status.HTTP_400_BAD_REQUEST)
 
         otp_generated = cache.get(cache_key)
       
@@ -206,7 +206,7 @@ def verify_otp(request):
             else:
                 return Response({"message": "success", "user": "not_found"}, status=status.HTTP_200_OK)
         else:
-            return Response({"message": "failed"} ,status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "failed"} ,status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         return Response({'error':f'{e}'},status=status.HTTP_400_BAD_REQUEST)
 
@@ -267,7 +267,7 @@ def test_api(request):
     auth_header = request.headers.get("Authorization")
     
     if not auth_header.startswith("Bearer "):
-        return Response({"message": "Invalid token format"}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({"error": "Invalid token format"}, status=status.HTTP_401_UNAUTHORIZED)
     token = auth_header.split(" ")[1]  # Extract JWT
     user_id = decode_jwt(token)  # Decode JWT
     try:
@@ -276,9 +276,9 @@ def test_api(request):
         print(e)
     
     if not user_id:
-        return Response({"message": "Invalid or expired token"}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({"error": "Invalid or expired token"}, status=status.HTTP_401_UNAUTHORIZED)
 
-    return Response({"message": "Success", "user_id": user_id})
+    return Response({"message": "Success", "user_id": user_id},status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -286,34 +286,34 @@ def logout(request):
     refresh_token = request.data.get('refresh_token')
 
     if not refresh_token:
-        return Response({"message": "Refresh token required"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "Refresh token required"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         token = RefreshToken.objects.get(token=refresh_token)
         token.delete()
         return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
     except RefreshToken.DoesNotExist:
-        return Response({"message": "Invalid refresh token"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "Invalid refresh token"}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
 def get_user_details(request):
     auth_header = request.headers.get("Authorization")
     print(auth_header)
     if not auth_header or not auth_header.startswith("Bearer "):
-        return Response({"message": "Invalid token format"}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({"error": "Invalid token format"}, status=status.HTTP_401_UNAUTHORIZED)
     
     token = auth_header.split(" ")[1]  # Extract JWT
     user_id = decode_jwt(token)  # Decode JWT
     
     if not user_id:
-        return Response({"message": "Invalid or expired token"}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({"error": "Invalid or expired token"}, status=status.HTTP_401_UNAUTHORIZED)
     
     try:
         user = User.objects.get(id=user_id)
         serializer = UserSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
     except User.DoesNotExist:
-        return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         print(f"Error in get_user_details: {e}")
         return Response({"error": "Something went wrong"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -326,18 +326,18 @@ def update_user_details(request):
     try:
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
-            return Response({"message": "Invalid token format"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"error": "Invalid token format"}, status=status.HTTP_401_UNAUTHORIZED)
         
         token = auth_header.split(" ")[1]
         user_id = decode_jwt(token)
         
         if not user_id:
-            return Response({"message": "Invalid or expired token"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"error": "Invalid or expired token"}, status=status.HTTP_401_UNAUTHORIZED)
         
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
-            return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
         
         serializer = UserSerializer(user, data=request.data, partial=True)  # partial=True allows partial updates
         if serializer.is_valid(raise_exception=True):
@@ -423,7 +423,7 @@ def get_default_address(request):
             return Response(serializer.data, status=status.HTTP_200_OK)
         
         
-        return Response({"message": "No addresses found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": "No addresses found"}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         print(f'at get_default_address {e}', status=status.HTTP_404_NOT_FOUND)
         
