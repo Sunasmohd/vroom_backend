@@ -113,28 +113,27 @@ WSGI_APPLICATION = 'vroom_backend.wsgi.application'
 #     }
 # }
 import pymysql
-print(os.environ.get('DB_HOSTS'))
 pymysql.install_as_MySQLdb()
 DATABASES = {
     'default': {
-        # 'ENGINE': 'dj_db_conn_pool.backends.mysql',  # Use pooling backend
-        'ENGINE': 'django.db.backends.mysql',  # Use pooling backend
+        'ENGINE': 'dj_db_conn_pool.backends.mysql',  # Use pooling backend
+        # 'ENGINE': 'django.db.backends.mysql',
         'NAME': os.environ.get('DB_NAMES'),
         'USER': os.environ.get('DB_USERNAMES'),
         'PASSWORD': os.environ.get('DB_PASSWORDS'),
         'PORT': os.environ.get('DB_PORTS'),
         'HOST': os.environ.get('DB_HOSTS'),
-        # 'OPTIONS': {
-        #     'charset': 'utf8mb4',
-        #     'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        # },
-        # 'POOL_OPTIONS': {
-        #     'POOL_SIZE': 4,  # Reduced to 3 to be conservative
-        #     'MAX_OVERFLOW': 0,  # No extra connections
-        #     'RECYCLE': 3600,  # Recycle every hour
-        #     'TIMEOUT': 30,  # Close idle connections after 30 seconds
-        # },
-        # 'CONN_MAX_AGE': 0,  # Close connections after each request
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
+        'POOL_OPTIONS': {
+            'POOL_SIZE': 4,  # Reduced to 4 to be conservative
+            'MAX_OVERFLOW': 0,  # No extra connections
+            'RECYCLE': 3600,  # Recycle every hour
+            'TIMEOUT': 30,  # Close idle connections after 30 seconds
+        },
+        'CONN_MAX_AGE': 0,  # Close connections after each request
     }
 }
 # DATABASES = {
